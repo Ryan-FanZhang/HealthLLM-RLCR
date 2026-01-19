@@ -1,0 +1,96 @@
+# =============================================================================
+# RLCR Configuration for PMData Healthcare Dataset
+# =============================================================================
+# Tasks: fatigue (0-5), readiness (0-10), sleep_quality (1-5), stress (0-5)
+# =============================================================================
+
+# Model arguments
+model_name_or_path: Qwen/Qwen2.5-7B
+run_name: "RLCR-pmdata"
+output_dir: data/RLCR-pmdata
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+# Option 1: Load from local disk (recommended after running data processing script)
+dataset_name: ./data/pmdata_processed/pmdata_tabc
+# Option 2: Load from HuggingFace Hub (uncomment if uploaded)
+# dataset_name: fzha836/pmdata_tabc
+
+# Num processes is less by 1 as vLLM is using 1 GPU
+num_processes: 1
+
+# GRPO trainer config
+bf16: true
+beta: 0.0
+eval_strategy: "steps"
+eval_steps: 50
+eval_on_start: false
+
+# Format pattern - must match sys_prompt_name
+# Options: "ta" (gen), "tac", "tabc", "tabc" (tabc_long uses tabc pattern)
+format_pattern: "tabc"
+
+# Gradient settings
+gradient_accumulation_steps: 32
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+
+# Hub settings
+hub_strategy: "end"
+push_to_hub: false  # Set to true if you want to push trained model to HF Hub
+
+# Learning settings
+learning_rate: 1e-06
+lr_scheduler_type: constant_with_warmup
+warmup_ratio: 0.05
+
+# Logging
+log_level: info
+logging_steps: 5
+logging_strategy: steps
+report_to:
+- wandb
+
+# Sequence length settings (PMData has shorter prompts than hotpot)
+max_prompt_length: 1024
+max_completion_length: 1024
+
+# Training settings
+max_steps: -1
+num_generations: 16
+num_iterations: 1
+num_train_epochs: 2
+
+# Batch size settings
+per_device_eval_batch_size: 16
+per_device_train_batch_size: 4
+
+# Save settings
+overwrite_output_dir: true
+save_strategy: "steps"
+save_steps: 100
+save_total_limit: 2
+
+# Reward functions
+# - format: Check output format (think/answer/analysis/confidence tags)
+# - accuracy: Check if answer is correct (uses math-verify for integers)
+# - brier: Calibration reward based on confidence vs correctness
+# - mean_confidence: Track average confidence (small weight for monitoring)
+# - confidence_one_or_zero: Penalize extreme confidences (small weight)
+reward_funcs: ["format", "accuracy", "brier", "mean_confidence", "confidence_one_or_zero"]
+reward_weights: [0.5, 0.5, 0.5, 0.000001, 0.000001]
+
+# Other settings
+scale_rewards: false
+seed: 42
+sys_prompt_name: "tabc"
+temperature: 0.7
+
+# vLLM settings for generation
+use_vllm: true
+vllm_device: auto
+vllm_gpu_memory_utilization: 0.4
+

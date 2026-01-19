@@ -1,0 +1,94 @@
+# =============================================================================
+# RLVR Configuration for PMData Healthcare Dataset
+# =============================================================================
+# RLVR = Reinforcement Learning with Verifiable Rewards
+# Only uses accuracy reward (no confidence calibration)
+# Output format: <think>...</think><answer>...</answer>
+# =============================================================================
+
+# Model arguments
+model_name_or_path: Qwen/Qwen2.5-7B
+run_name: "RLVR-pmdata"
+output_dir: data/RLVR-pmdata
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+# Use "gen" version of dataset (matches sys_prompt_name)
+dataset_name: ./data/pmdata_processed/pmdata_gen
+# Option 2: Load from HuggingFace Hub (uncomment if uploaded)
+# dataset_name: fzha836/pmdata_gen
+
+# Num processes is less by 1 as vLLM is using 1 GPU
+num_processes: 1
+
+# GRPO trainer config
+bf16: true
+beta: 0.0
+eval_strategy: "steps"
+eval_steps: 50
+eval_on_start: false
+
+# Format pattern - "ta" for think-answer only (no confidence)
+format_pattern: "ta"
+
+# Gradient settings
+gradient_accumulation_steps: 32
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+
+# Hub settings
+hub_strategy: "end"
+push_to_hub: false
+
+# Learning settings
+learning_rate: 1e-06
+lr_scheduler_type: constant_with_warmup
+warmup_ratio: 0.05
+
+# Logging
+log_level: info
+logging_steps: 5
+logging_strategy: steps
+report_to:
+- wandb
+
+# Sequence length settings
+max_prompt_length: 1024
+max_completion_length: 1024
+
+# Training settings
+max_steps: -1
+num_generations: 16
+num_iterations: 1
+num_train_epochs: 2
+
+# Batch size settings
+per_device_eval_batch_size: 16
+per_device_train_batch_size: 4
+
+# Save settings
+overwrite_output_dir: true
+save_strategy: "steps"
+save_steps: 100
+save_total_limit: 2
+
+# Reward functions for RLVR
+# Key difference from RLCR: brier weight is very small (essentially disabled)
+# Only format and accuracy matter
+reward_funcs: ["format", "accuracy", "brier", "mean_confidence", "confidence_one_or_zero"]
+reward_weights: [0.5, 0.5, 0.000001, 0.000001, 0.000001]
+
+# Other settings
+scale_rewards: false
+seed: 42
+sys_prompt_name: "gen"  # Uses GEN_PROMPT (think + answer only)
+temperature: 0.7
+
+# vLLM settings
+use_vllm: true
+vllm_device: auto
+vllm_gpu_memory_utilization: 0.4
+
